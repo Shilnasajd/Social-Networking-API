@@ -6,7 +6,8 @@ from .views import (
     PrintHelloWorldView, 
     UserSearchAPIView,
     SendFriendRequestAPIView,
-    AcceptRejectFriendRequestAPIView,
+    AcceptFriendRequestAPIView,
+    RejectFriendRequestAPIView,
     ListFriendsAPIView,
     ListPendingFriendRequestsAPIView,
     UserListView
@@ -18,7 +19,8 @@ urlpatterns = [
     # path('print_hello_world/', PrintHelloWorldView.as_view(), name='print_hello_world'),
     path('search/', UserSearchAPIView.as_view(), name='user-search'),
     path('friend-request/send/', SendFriendRequestAPIView.as_view(), name='send-friend-request'),
-    path('friend-request/respond/', AcceptRejectFriendRequestAPIView.as_view(), name='respond-friend-request'),
+    path('friend-request/accept/', AcceptFriendRequestAPIView.as_view(), name='respond-friend-request'),
+    path('friend-request/reject/', RejectFriendRequestAPIView.as_view(), name='respond-friend-request'),
     path('friends/', ListFriendsAPIView.as_view(), name='list-friends'),
     path('friend-requests/pending/', ListPendingFriendRequestsAPIView.as_view(), name='list-pending-friend-requests'),
 

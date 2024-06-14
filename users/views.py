@@ -118,13 +118,13 @@ class SendFriendRequestAPIView(generics.CreateAPIView):
             raise ValidationError('Friend request already sent.')
 
         # Save the friend request with the authenticated user as the sender
-        serializer.save(from_user=from_user, to_user=to_user)
+        # Set the accepted field to null by default
+        serializer.save(from_user=from_user, to_user=to_user, accepted=None)
 
         # Optionally return a success response
-        return Response({'detail': 'Friend request sent successfully.'})
+        return Response({'detail': 'Friend request sent successfully.'})        
         
-        
-class AcceptRejectFriendRequestAPIView(generics.UpdateAPIView):
+class AcceptFriendRequestAPIView(generics.UpdateAPIView):
     serializer_class = FriendRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -133,28 +133,52 @@ class AcceptRejectFriendRequestAPIView(generics.UpdateAPIView):
         if request_id is None:
             return Response({'detail': 'Request ID is required in the request body.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Get the friend request instance
         try:
             instance = FriendRequest.objects.get(id=request_id)
         except FriendRequest.DoesNotExist:
             return Response({'detail': 'Friend request not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Check if the authenticated user is the recipient of the friend request
         if instance.to_user != request.user:
             return Response({'detail': 'You are not authorized to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Update the accepted status based on the request data
-        accepted = request.data.get('accepted', None)
-        if accepted is None:
-            return Response({'detail': 'Accepted field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Change the status from false or null to true
+        if instance.accepted is None:
+            instance.accepted = True
+            instance.save()
+            return Response({'status': 'Friend request accepted'}, status=status.HTTP_200_OK)
+        elif not instance.accepted:
+            instance.accepted = True
+            instance.save()
+            return Response({'status': 'Friend request already accepted'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Friend request already accepted'}, status=status.HTTP_400_BAD_REQUEST)
+        
+class RejectFriendRequestAPIView(generics.UpdateAPIView):
+    serializer_class = FriendRequestSerializer
+    permission_classes = [permissions.IsAuthenticated]
 
-        instance.accepted = accepted
-        instance.save()
+    def update(self, request, *args, **kwargs):
+        request_id = request.data.get('id')
+        if request_id is None:
+            return Response({'detail': 'Request ID is required in the request body.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Optionally return a success response
-        return Response({'status': 'Friend request updated'}, status=status.HTTP_200_OK)
-    
+        try:
+            instance = FriendRequest.objects.get(id=request_id)
+        except FriendRequest.DoesNotExist:
+            return Response({'detail': 'Friend request not found.'}, status=status.HTTP_404_NOT_FOUND)
 
+        if instance.to_user != request.user:
+            return Response({'detail': 'You are not authorized to perform this action.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Change the status from true to false
+        if instance.accepted:
+            instance.accepted = False
+            instance.save()
+            instance.delete()  # Delete the instance after rejecting
+            return Response({'status': 'Friend request rejected'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'detail': 'Friend request already rejected'}, status=status.HTTP_400_BAD_REQUEST)
+            
 class ListFriendsAPIView(generics.ListAPIView):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
