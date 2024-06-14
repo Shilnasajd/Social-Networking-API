@@ -21,7 +21,7 @@ git clone https://github.com/Shilnasajd/Social-Networking-API.git
     python -m venv env
     env\Scripts\activate
 ```
-3. Install Requirements
+. Install Requirements
 ```
     pip install -r requirements.txt
 ```
@@ -45,7 +45,12 @@ project where manage.py is located.
 ```
     localhost:8000/swagger/
 ```
+## Check API's
 
+1. Postman collection Link
+```
+https://drive.google.com/file/d/1z3Bsqx6P2MY_vqIDN6LT5FyCXjd8SDrt/view?usp=sharing
+```
 ## Docker
 
 ### Ubuntu
@@ -104,9 +109,3 @@ project where manage.py is located.
     docker-compose up -d
 ```
 
-## References
-
-1. Postman collection Link
-```
-https://drive.google.com/file/d/1z3Bsqx6P2MY_vqIDN6LT5FyCXjd8SDrt/view?usp=sharing
-```
