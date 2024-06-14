@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from .models import FriendRequest
+from rest_framework.pagination import PageNumberPagination
 
 
 User = get_user_model()
@@ -39,24 +40,24 @@ class UserSerializer(serializers.ModelSerializer):
         user = User.objects.create_user(**validated_data)
         return user
     
-class UserSearchSerializer(serializers.Serializer):
-    search_keyword = serializers.CharField(max_length=255)
+class UserSearchPagination(PageNumberPagination):
+    page_size_query_param = 'page_size'
+    max_page_size = 100  # Optional: set a maximum limit for items per page
 
 class FriendRequestSerializer(serializers.ModelSerializer):
     from_user_name = serializers.SerializerMethodField()
+    to_user_name = serializers.SerializerMethodField()
 
     class Meta:
         model = FriendRequest
-        fields = ['id', 'from_user', 'from_user_name']  # Add other fields as needed
+        fields = ['id', 'from_user_name', 'to_user_name']  # Include to_user_name instead of to_user
 
     def get_from_user_name(self, obj):
-        from_user_id = obj.from_user_id
-        try:
-            from_user = User.objects.get(id=from_user_id)
-            return from_user.username
-        except User.DoesNotExist:
-            return None
-        
+        return obj.from_user.username
+
+    def get_to_user_name(self, obj):
+        return obj.to_user.username
+                            
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
