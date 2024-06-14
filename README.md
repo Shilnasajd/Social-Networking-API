@@ -2,7 +2,12 @@
 
 ## Setup
 
-1. Install Virtual Environment
+1. Clone the repository
+```
+git clone https://github.com/Shilnasajd/Social-Networking-API.git
+```
+
+2. Install Virtual Environment
    - cd Social-Networking-API/
 #### Ubuntu
 ```
@@ -16,7 +21,7 @@
     python -m venv env
     env\Scripts\activate
 ```
-2. Install Requirements
+3. Install Requirements
 ```
     pip install -r requirements.txt
 ```
