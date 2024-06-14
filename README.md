@@ -34,6 +34,7 @@ project where manage.py is located.
 
 #### Ubuntu
 ```
+    python3 manage.py
     python3 manage.py runserver
 ```
 #### Windows

@@ -4,14 +4,13 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import UserSerializer, LoginSerializer, RegisterSerializer
-from .serializers import UserSearchSerializer, FriendRequestSerializer
+from .serializers import UserSearchPagination, FriendRequestSerializer
 from drf_yasg.utils import swagger_auto_schema
 from .models import FriendRequest
 from rest_framework import permissions, throttling
 from rest_framework.exceptions import ValidationError
-
-
-
+from rest_framework.permissions import IsAuthenticated
+from .pagination import CustomPagination
 
 User = get_user_model()
 
@@ -42,7 +41,11 @@ class LoginView(generics.GenericAPIView):
             })
         return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
     
-from rest_framework.permissions import IsAuthenticated
+class UserListView(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = CustomPagination
 
 class PrintHelloWorldView(generics.GenericAPIView):
     permission_classes = [IsAuthenticated]
@@ -59,11 +62,11 @@ class PrintHelloWorldView(generics.GenericAPIView):
 
 class UserSearchAPIView(generics.ListAPIView):
     serializer_class = UserSerializer  # Use the appropriate serializer for User details
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         search_keyword = self.request.query_params.get('search_keyword', '')
         if search_keyword:
-            # Filter users where either email or username contains the search keyword
             queryset = User.objects.filter(email__icontains=search_keyword) | \
                        User.objects.filter(username__icontains=search_keyword)
         else:
@@ -72,15 +75,21 @@ class UserSearchAPIView(generics.ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    
+            
 class FriendRequestThrottle(throttling.UserRateThrottle):
     rate = '3/min'
 
 class SendFriendRequestAPIView(generics.CreateAPIView):
     serializer_class = FriendRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [FriendRequestThrottle]  # Add the throttle class
 
     def perform_create(self, serializer):
         # Get the authenticated user from the request
@@ -92,6 +101,10 @@ class SendFriendRequestAPIView(generics.CreateAPIView):
         # Check if the "to_user" ID is provided
         if not to_user_id:
             raise ValidationError('The "to_user" field is required.')
+
+        # Check if the "to_user" is the same as the "from_user"
+        if from_user.id == int(to_user_id):
+            raise ValidationError('You cannot send a friend request to yourself.')
 
         # Get the "to_user" instance
         to_user = User.objects.filter(id=to_user_id).first()
@@ -109,14 +122,22 @@ class SendFriendRequestAPIView(generics.CreateAPIView):
 
         # Optionally return a success response
         return Response({'detail': 'Friend request sent successfully.'})
-    
+        
+        
 class AcceptRejectFriendRequestAPIView(generics.UpdateAPIView):
     serializer_class = FriendRequestSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def update(self, request, *args, **kwargs):
+        request_id = request.data.get('id')
+        if request_id is None:
+            return Response({'detail': 'Request ID is required in the request body.'}, status=status.HTTP_400_BAD_REQUEST)
+
         # Get the friend request instance
-        instance = self.get_object()
+        try:
+            instance = FriendRequest.objects.get(id=request_id)
+        except FriendRequest.DoesNotExist:
+            return Response({'detail': 'Friend request not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         # Check if the authenticated user is the recipient of the friend request
         if instance.to_user != request.user:
@@ -132,10 +153,6 @@ class AcceptRejectFriendRequestAPIView(generics.UpdateAPIView):
 
         # Optionally return a success response
         return Response({'status': 'Friend request updated'}, status=status.HTTP_200_OK)
-
-    def get_queryset(self):
-        # Only allow updating friend requests where the authenticated user is the recipient
-        return FriendRequest.objects.filter(to_user=self.request.user)
     
 
 class ListFriendsAPIView(generics.ListAPIView):
