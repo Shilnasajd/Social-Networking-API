@@ -196,4 +196,4 @@ class ListPendingFriendRequestsAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         # Only allow listing pending friend requests where the authenticated user is the sender
-        return FriendRequest.objects.filter(to_user=self.request.user, accepted=False)
+        return FriendRequest.objects.filter(to_user=self.request.user, accepted=None)
